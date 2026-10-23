@@ -5,8 +5,24 @@ on:
       prompt:
         description: 'Content prompt'
         required: true
+        default: 'Create premium educational video'
+      style:
+        description: 'Animation style'
+        default: 'cinematic-premium'
+
 jobs:
+  generate-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python premium_lottie_generator.py
+      - run: python motion_graphics_engine.py
+      - run: echo "Prompt: ${{ github.event.inputs.prompt }}"
+  
   test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Workflow ready"
+      - run: echo "Workflow is working!"
