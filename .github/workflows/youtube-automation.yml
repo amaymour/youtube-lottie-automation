@@ -1,0 +1,12 @@
+name: Premium YouTube Automation
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Content prompt'
+        required: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow ready"

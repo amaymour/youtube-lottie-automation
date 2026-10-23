@@ -1,1 +1,2 @@
-# youtube-lottie-automation
+# Premium YouTube Automation
+Automated content generation with Lottie animations
