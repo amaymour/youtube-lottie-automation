@@ -1,4 +1,5 @@
 name: Premium YouTube Automation
+
 on:
   workflow_dispatch:
     inputs:
@@ -9,20 +10,55 @@ on:
       style:
         description: 'Animation style'
         default: 'cinematic-premium'
+  repository_dispatch:
+    types: [youtube_trigger]
 
 jobs:
   generate-content:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python premium_lottie_generator.py
-      - run: python motion_graphics_engine.py
-      - run: echo "Prompt: ${{ github.event.inputs.prompt }}"
-  
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Workflow is working!"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || pip install openai requests pydantic
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Generate Lottie Animations
+        run: |
+          python scripts/generate_premium_lottie.py --output lottie_assets
+
+      - name: Generate Motion Graphics
+        run: |
+          python scripts/generate_motion_graphics.py --output motion_assets
+
+      - name: Synthesize Voiceover
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          PROMPT="${{ github.event.inputs.prompt || github.event.client_payload.prompt || 'Create premium educational video' }}"
+          python scripts/synthesize_voice_openai.py --text "$PROMPT" --output voiceover.mp3 || echo "Voiceover synthesis skipped/fallback"
+
+      - name: Assemble Final MP4 Video
+        run: |
+          AUDIO_FILE="voiceover.mp3"
+          if [ ! -f "$AUDIO_FILE" ]; then
+            # Create silent audio if missing
+            ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=stereo -t 10 voiceover.mp3
+          fi
+          python scripts/assemble_video.py --animations lottie_assets --audio voiceover.mp3 --output final_video.mp4 --resolution 1920x1080 --fps 60
+
+      - name: Upload Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-video-output
+          path: final_video.mp4
